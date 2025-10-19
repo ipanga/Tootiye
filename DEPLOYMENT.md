@@ -6,11 +6,103 @@ This guide provides step-by-step instructions for deploying the Tootiye Enterpri
 
 - AlwaysData account
 - Domain name (tootiye.com) configured
-- SSH/FTP access to your AlwaysData account
+- SSH access to your AlwaysData account
+- Git installed on the server (usually pre-installed)
+- Node.js and npm installed on the server
+- GitHub repository: https://github.com/ipanga/Tootiye.git
 
 ## Quick Deployment Steps
 
-### 1. Build the Project Locally
+### Method 1: Deploy Directly from Git Repository (Recommended)
+
+This method deploys directly from your GitHub repository, allowing for easy updates and version control.
+
+#### Initial Setup
+
+```bash
+# 1. Connect to AlwaysData via SSH
+ssh your-account@ssh-your-account.alwaysdata.net
+
+# 2. Navigate to your web directory
+cd ~/www/
+
+# 3. Clone the repository
+git clone https://github.com/ipanga/Tootiye.git tootiye
+cd tootiye
+
+# 4. Install dependencies
+npm install
+
+# 5. Build the project
+npm run build
+
+# 6. Exit SSH
+exit
+```
+
+#### Configure Site to Use the Built Files
+
+After building, configure your AlwaysData site:
+
+1. Go to **Web > Sites** in AlwaysData admin
+2. Edit your site configuration
+3. Set **Root directory** to: `/www/tootiye/dist`
+4. Save the configuration
+
+#### Updating the Site
+
+When you push changes to GitHub, update your site:
+
+```bash
+# 1. SSH into your server
+ssh your-account@ssh-your-account.alwaysdata.net
+
+# 2. Navigate to project directory
+cd ~/www/tootiye
+
+# 3. Pull latest changes
+git pull origin main
+
+# 4. Install any new dependencies
+npm install
+
+# 5. Rebuild the project
+npm run build
+
+# 6. Exit
+exit
+```
+
+#### Automated Deployment Script (Optional)
+
+Create a deployment script on the server for easier updates:
+
+```bash
+# On your server, create deploy.sh
+cat > ~/www/tootiye/deploy.sh << 'EOF'
+#!/bin/bash
+cd ~/www/tootiye
+echo "Pulling latest changes..."
+git pull origin main
+echo "Installing dependencies..."
+npm install
+echo "Building project..."
+npm run build
+echo "Deployment complete!"
+EOF
+
+# Make it executable
+chmod +x ~/www/tootiye/deploy.sh
+```
+
+Then update your site with a single command:
+```bash
+ssh your-account@ssh-your-account.alwaysdata.net "~/www/tootiye/deploy.sh"
+```
+
+### Method 2: Build Locally and Upload
+
+#### 1. Build the Project Locally
 
 ```bash
 # Install dependencies
@@ -22,7 +114,7 @@ npm run build
 
 This creates a `dist` folder with all static files.
 
-### 2. Deploy via SSH (Recommended)
+#### 2. Deploy via SSH
 
 ```bash
 # Connect to AlwaysData via SSH
@@ -156,7 +248,33 @@ npm run build
 
 ## Updating the Site
 
-To update the site after making changes:
+### Using Git Deployment (Recommended)
+
+If you deployed using Method 1 (Git Repository):
+
+```bash
+# 1. Make your changes locally and commit
+git add .
+git commit -m "Your changes description"
+git push origin main
+
+# 2. Deploy to server (using the deployment script)
+ssh your-account@ssh-your-account.alwaysdata.net "~/www/tootiye/deploy.sh"
+
+# Or manually:
+ssh your-account@ssh-your-account.alwaysdata.net
+cd ~/www/tootiye
+git pull origin main
+npm install
+npm run build
+exit
+
+# 3. Clear browser cache or use Ctrl+F5 to see changes
+```
+
+### Using Local Build and Upload
+
+If you deployed using Method 2 (Local Build):
 
 ```bash
 # 1. Make your changes to the code
@@ -165,23 +283,62 @@ To update the site after making changes:
 npm run build
 
 # 3. Upload new files
-scp -r dist/* your-account@ssh-your-account.alwaysdata.net:~/www/tootiye/
+scp -r dist/* your-account@ssh-your-account.alwaysdata.net:~/www/tootiye/dist/
 
 # 4. Clear browser cache or use Ctrl+F5 to see changes
 ```
 
 ## Troubleshooting
 
+### Git Deployment Issues
+
+#### Node.js not found
+If you get "npm: command not found":
+```bash
+# Check Node.js version
+node --version
+npm --version
+
+# If not installed, contact AlwaysData support to install Node.js
+# Or check if Node.js is available in a different location
+which node
+```
+
+#### Git clone fails with authentication error
+If the repository is private:
+```bash
+# Use SSH URL instead
+git clone git@github.com:ipanga/Tootiye.git tootiye
+
+# Or configure GitHub personal access token
+git clone https://YOUR_TOKEN@github.com/ipanga/Tootiye.git tootiye
+```
+
+#### Build fails with memory errors
+If npm build fails due to memory:
+```bash
+# Increase Node.js memory limit
+NODE_OPTIONS="--max-old-space-size=2048" npm run build
+```
+
+#### Permission denied errors
+```bash
+# Fix file permissions
+chmod -R 755 ~/www/tootiye
+```
+
 ### Pages return 404 errors
-- Check `.htaccess` file is present
+- Check `.htaccess` file is present in the `dist` folder
 - Verify mod_rewrite is enabled
 - Check file permissions (should be 644 for files, 755 for directories)
+- Ensure site root directory points to `/www/tootiye/dist`
 
 ### CSS/JS not loading
 - Clear browser cache
 - Check file paths in browser console
 - Verify all files uploaded correctly
 - Check CORS settings if loading from CDN
+- Ensure build completed successfully
 
 ### Contact form not working
 - Verify EmailJS credentials
@@ -192,6 +349,7 @@ scp -r dist/* your-account@ssh-your-account.alwaysdata.net:~/www/tootiye/
 - Check DNS propagation: [whatsmydns.net](https://www.whatsmydns.net/)
 - Verify site configuration in AlwaysData
 - Check error logs in AlwaysData admin (**Web > Sites > Logs**)
+- Ensure the `dist` folder exists and contains files
 
 ## Performance Optimization
 
